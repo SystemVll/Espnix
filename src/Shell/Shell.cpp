@@ -51,10 +51,11 @@ void Shell::Interpret(const std::string &input)
         args.push_back(arg);
     }
 
-    terminal->Write(command);
-    for (size_t i = 0; i < args.size(); i++)
+    // Skip if command is empty
+    if (command.empty())
     {
-        terminal->Write(" " + args[i]);
+        this->Prompt();
+        return;
     }
 
     terminal->Write("\n");
@@ -62,10 +63,10 @@ void Shell::Interpret(const std::string &input)
     auto it = commandRegistry.find(command);
     if (it != commandRegistry.end())
     {
-        FileDescriptor *input = new FileDescriptor(0);
-        FileDescriptor *output = new FileDescriptor(1);
+        FileDescriptor *stdin_fd = new FileDescriptor(0);
+        FileDescriptor *stdout_fd = new FileDescriptor(1);
 
-        it->second->Execute(args, terminal, input, output);
+        it->second->Execute(args, terminal, stdin_fd, stdout_fd);
     }
     else
     {

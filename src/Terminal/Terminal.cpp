@@ -20,13 +20,40 @@ Terminal::Terminal(int baudRate, int user)
 
 void Terminal::Read()
 {
-    std::string command = Serial.readStringUntil('\n').c_str();
-    if (command.length() == 0)
+    while (Serial.available())
     {
-        return;
-    }
+        char c = Serial.read();
 
-    this->shell->Interpret(command);
+        if (c == '\n' || c == '\r')
+        {
+            if (inputBuffer.empty())
+            {
+                this->Write("\n");
+                this->shell->Prompt();
+                return;
+            }
+
+            size_t start = inputBuffer.find_first_not_of(" \t\r\n");
+            size_t end = inputBuffer.find_last_not_of(" \t\r\n");
+
+            if (start != std::string::npos)
+            {
+                std::string input = inputBuffer.substr(start, end - start + 1);
+                inputBuffer.clear();
+                this->shell->Interpret(input);
+            }
+            else
+            {
+                inputBuffer.clear();
+                this->Write("\n");
+                this->shell->Prompt();
+            }
+            return;
+        }
+
+        Serial.write(c);
+        inputBuffer += c;
+    }
 }
 
 void Terminal::Write(std::string output)

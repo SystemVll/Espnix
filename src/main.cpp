@@ -9,6 +9,8 @@ Terminal *terminalFrame;
 
 void setup()
 {
+    terminalFrame = new Terminal(250000, 1);
+
     if (!SD.begin(SD_CS))
     {
         terminalFrame->Write("SD Card initialization failed!\n");
@@ -17,8 +19,6 @@ void setup()
     {
         terminalFrame->Write("SD Card initialized successfully.\n");
     }
-
-    terminalFrame = new Terminal(250000, 1);
 }
 
 void loop()

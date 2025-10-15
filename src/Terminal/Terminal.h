@@ -8,6 +8,8 @@ class Shell;
 
 class Terminal
 {
+    std::string inputBuffer;
+
 public:
     int baudRate;
     Session *session;
