@@ -5,7 +5,11 @@ void EchoCommand::Execute(const std::vector<std::string> &args, Terminal *termin
 {
     for (size_t i = 0; i < args.size(); i++)
     {
-        terminal->Write(args[i] + " ");
+        if (i > 0)
+        {
+            terminal->Write(" ");
+        }
+        terminal->Write(args[i]);
     }
 
     terminal->Write("\n");

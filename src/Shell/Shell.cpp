@@ -58,18 +58,18 @@ void Shell::Interpret(const std::string &input)
 
     if (!command.empty())
     {
-        terminal->Write("\n");
-
         auto it = commandRegistry.find(command);
         if (it != commandRegistry.end())
         {
             FileDescriptor *stdin_fd = new FileDescriptor(0);
             FileDescriptor *stdout_fd = new FileDescriptor(1);
 
+            terminal->Write("\n");
             it->second->Execute(args, terminal, stdin_fd, stdout_fd);
         }
         else
         {
+            terminal->Write("\n");
             terminal->Write(command + ": command not found\n");
         }
     }
