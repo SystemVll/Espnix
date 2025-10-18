@@ -3,18 +3,33 @@
 
 #include <Session/Session.h>
 #include <Shell/Shell.h>
+#include <Utils/BootMessages.h>
 
 #include "Terminal.h"
 
 Terminal::Terminal(int baudRate, int user)
 {
     Serial.begin(baudRate);
+    // Wait for serial to initialize
+    delay(100);
+
+    BootMessages::PrintInfo("Starting serial communication at " + std::to_string(baudRate) + " baud");
+
     this->baudRate = baudRate;
+
+    BootMessages::PrintInfo("Initializing session management");
     this->session = new Session();
     this->session->SetUser(user);
+    BootMessages::PrintOK("Session created for user " + std::to_string(user));
 
+    BootMessages::PrintInfo("Loading shell environment");
     this->shell = new Shell();
     this->shell->terminal = this;
+    BootMessages::PrintOK("Shell initialized successfully");
+
+    BootMessages::PrintOK("Terminal ready");
+    Serial.println("");
+
     this->shell->Prompt();
 }
 
@@ -28,8 +43,6 @@ void Terminal::Read()
         {
             if (inputBuffer.empty())
             {
-                this->Write("\n");
-                this->shell->Prompt();
                 return;
             }
 

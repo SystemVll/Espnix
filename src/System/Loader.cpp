@@ -1,5 +1,6 @@
 #include "Loader.h"
 #include <Terminal/Terminal.h>
+#include <Utils/BootMessages.h>
 #include <esp_partition.h>
 #include <esp_spi_flash.h>
 #include <esp_heap_caps.h>
@@ -11,19 +12,24 @@ typedef int (*EntryPointFunc)(void *context);
 
 Loader::Loader(Terminal *term) : terminal(term)
 {
+    BootMessages::PrintInfo("Initializing binary loader");
+
     execMemory = (uint8_t *)heap_caps_malloc(MAX_BINARY_SIZE, MALLOC_CAP_EXEC);
     if (!execMemory)
     {
+        BootMessages::PrintFail("Failed to allocate execution memory");
         terminal->Write("Failed to allocate execution memory!\n");
     }
     else
     {
-        terminal->Write("Allocated executable memory for binary execution\n");
+        BootMessages::PrintOK("Allocated " + std::to_string(MAX_BINARY_SIZE / 1024) + "KB executable memory");
     }
 
     execContext = new ExecutionContext();
     execContext->terminal = terminal;
     execContext->loader = this;
+
+    BootMessages::PrintOK("Binary loader ready");
 }
 
 Loader::~Loader()

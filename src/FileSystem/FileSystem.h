@@ -3,17 +3,13 @@
 
 #include <vector>
 #include <string>
+#include <SD.h>
 
-class Folder;
-class File;
-
-class FileSystemEntry
+namespace espnix
 {
-public:
-    std::string name;
-    int owner;
-    int permissions; // Octal representation of permissions
-};
+    class Folder;
+    class File;
+}
 
 class FileSystem
 {
@@ -21,17 +17,26 @@ private:
     static FileSystem *instance;
     FileSystem();
 
+    void LoadDirectoryFromSD(const char *path, espnix::Folder *parent);
+    void SaveDirectoryToSD(const char *sdPath, espnix::Folder *folder);
+
 public:
     std::string currentPath;
-    Folder *root;
+    espnix::Folder *root;
+    bool sdMounted;
+    bool inInitramfs;
 
     FileSystem(const FileSystem &) = delete;
     FileSystem &operator=(const FileSystem &) = delete;
 
     static FileSystem *GetInstance();
+    void InitializeInitramfs();
+    bool MountSDCard();
+    void LoadFromSD();
+    void SyncToSD();
     std::string GetStringPermissions(int permissions, std::string entryType);
-    File *GetFile(std::string path);
-    Folder *GetFolder(std::string path);
+    espnix::File *GetFile(std::string path);
+    espnix::Folder *GetFolder(std::string path);
     bool FolderExists(std::string path);
 };
 

@@ -3,60 +3,63 @@
 #include "Folder.h"
 #include "File.h"
 
-Folder::Folder()
+namespace espnix
 {
-    this->permissions = 0777;
-}
-
-void Folder::AddFile(File *file)
-{
-    file->creationDate = time(0);
-    this->files.push_back(file);
-}
-
-void Folder::AddFolder(Folder *folder)
-{
-    folder->creationDate = time(0);
-    this->folders.push_back(folder);
-}
-
-std::vector<void *> Folder::ListContent()
-{
-    std::vector<void *> contents;
-
-    for (auto &file : this->files)
+    Folder::Folder()
     {
-        contents.push_back(static_cast<void *>(&file));
+        this->permissions = 0777;
     }
 
-    for (auto &folder : this->folders)
+    void Folder::AddFile(File *file)
     {
-        contents.push_back(static_cast<void *>(&folder));
+        file->creationDate = time(0);
+        this->files.push_back(file);
     }
 
-    return contents;
-}
-
-void Folder::RemoveFile(std::string filename)
-{
-    for (int i = 0; i < this->files.size(); i++)
+    void Folder::AddFolder(Folder *folder)
     {
-        if ((*this->files[i]).name == filename)
+        folder->creationDate = time(0);
+        this->folders.push_back(folder);
+    }
+
+    std::vector<void *> Folder::ListContent()
+    {
+        std::vector<void *> contents;
+
+        for (auto &file : this->files)
         {
-            this->files.erase(this->files.begin() + i);
-            break;
+            contents.push_back(static_cast<void *>(&file));
+        }
+
+        for (auto &folder : this->folders)
+        {
+            contents.push_back(static_cast<void *>(&folder));
+        }
+
+        return contents;
+    }
+
+    void Folder::RemoveFile(std::string filename)
+    {
+        for (size_t i = 0; i < this->files.size(); i++)
+        {
+            if (this->files[i]->name == filename)
+            {
+                this->files.erase(this->files.begin() + i);
+                break;
+            }
         }
     }
-}
 
-void Folder::RemoveFolder(std::string foldername)
-{
-    for (int i = 0; i < this->folders.size(); i++)
+    void Folder::RemoveFolder(std::string foldername)
     {
-        if ((*this->folders[i]).name == foldername)
+        for (size_t i = 0; i < this->folders.size(); i++)
         {
-            this->folders.erase(this->folders.begin() + i);
-            break;
+            if (this->folders[i]->name == foldername)
+            {
+                this->folders.erase(this->folders.begin() + i);
+                break;
+            }
         }
     }
 }

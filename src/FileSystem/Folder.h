@@ -4,27 +4,30 @@
 #include <string>
 #include <vector>
 
-class File;
-class Folder;
-
-class Folder
+namespace espnix
 {
-public:
-    std::string name;
-    std::vector<File *> files;
-    std::vector<Folder *> folders;
-    Folder *parent;
-    Folder *current;
-    int owner;
-    int permissions;
-    long creationDate;
+    class File;
+    class Folder;
 
-    Folder();
-    void AddFile(File *file);
-    void AddFolder(Folder *folder);
-    std::vector<void *> ListContent();
-    void RemoveFile(std::string filename);
-    void RemoveFolder(std::string foldername);
-};
+    class Folder
+    {
+    public:
+        std::string name;
+        std::vector<File *> files;
+        std::vector<Folder *> folders;
+        Folder *parent;
+        Folder *current;
+        int owner;
+        int permissions;
+        long creationDate;
+
+        Folder();
+        void AddFile(File *file);
+        void AddFolder(Folder *folder);
+        std::vector<void *> ListContent();
+        void RemoveFile(std::string filename);
+        void RemoveFolder(std::string foldername);
+    };
+}
 
 #endif

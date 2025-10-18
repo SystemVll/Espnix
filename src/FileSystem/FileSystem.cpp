@@ -3,6 +3,7 @@
 
 #include <FileSystem/Folder.h>
 #include <FileSystem/file.h>
+#include <Utils/BootMessages.h>
 
 #include "FileSystem.h"
 
@@ -10,17 +11,237 @@ FileSystem *FileSystem::instance = nullptr;
 
 FileSystem::FileSystem()
 {
-    this->root = new Folder();
+    this->root = nullptr;
+    this->sdMounted = false;
+    this->inInitramfs = true;
+    this->currentPath = "/";
+}
+
+void FileSystem::InitializeInitramfs()
+{
+    BootMessages::PrintInfo("Initializing initramfs (temporary root filesystem)");
+
+    this->root = new espnix::Folder();
     this->root->parent = nullptr;
+    this->root->name = "/";
 
-    File *newFile = new File();
-    newFile->name = "README.md";
-    newFile->Write("Welcome to Espnix a simple Unix-like syste m for ESP32\n");
-    newFile->permissions = 0777;
+    BootMessages::PrintOK("Initramfs mounted at /");
+    BootMessages::PrintInfo("Creating initial filesystem structure");
 
-    this->root->AddFile(newFile);
+    espnix::File *readme = new espnix::File();
+    readme->name = "README.md";
+    readme->Write("Welcome to Espnix - a simple Unix-like system for ESP32\n");
+    readme->permissions = 0644;
+    this->root->AddFile(readme);
+
+    espnix::Folder *etc = new espnix::Folder();
+    etc->name = "etc";
+    etc->permissions = 0755;
+    etc->parent = this->root;
+    this->root->AddFolder(etc);
+
+    espnix::Folder *tmp = new espnix::Folder();
+    tmp->name = "tmp";
+    tmp->permissions = 0777;
+    tmp->parent = this->root;
+    this->root->AddFolder(tmp);
+
+    espnix::Folder *home = new espnix::Folder();
+    home->name = "home";
+    home->permissions = 0755;
+    home->parent = this->root;
+    this->root->AddFolder(home);
 
     this->currentPath = "/";
+    this->inInitramfs = true;
+
+    BootMessages::PrintOK("Initramfs initialized (tmpfs mode)");
+}
+
+bool FileSystem::MountSDCard()
+{
+    BootMessages::PrintInfo("Attempting to mount real filesystem from SD card");
+
+    if (!SD.begin())
+    {
+        BootMessages::PrintWarn("SD card initialization failed");
+        BootMessages::PrintInfo("Continuing with initramfs only (no persistence)");
+        return false;
+    }
+
+    uint8_t cardType = SD.cardType();
+    if (cardType == CARD_NONE)
+    {
+        BootMessages::PrintWarn("No SD card attached");
+        BootMessages::PrintInfo("Continuing with initramfs only (no persistence)");
+        return false;
+    }
+
+    std::string cardTypeStr;
+    if (cardType == CARD_MMC)
+        cardTypeStr = "MMC";
+    else if (cardType == CARD_SD)
+        cardTypeStr = "SDSC";
+    else if (cardType == CARD_SDHC)
+        cardTypeStr = "SDHC";
+    else
+        cardTypeStr = "UNKNOWN";
+
+    uint64_t cardSize = SD.cardSize() / (1024 * 1024);
+    BootMessages::PrintOK("SD card detected: " + cardTypeStr + " (" + std::to_string(cardSize) + " MB)");
+
+    this->sdMounted = true;
+    this->inInitramfs = false;
+
+    BootMessages::PrintInfo("Switching root filesystem to SD card");
+    BootMessages::PrintOK("Root filesystem mounted from SD card (read/write)");
+    BootMessages::PrintInfo("Total space: " + std::to_string(SD.totalBytes() / (1024 * 1024)) + " MB");
+    BootMessages::PrintInfo("Free space: " + std::to_string((SD.totalBytes() - SD.usedBytes()) / (1024 * 1024)) + " MB");
+
+    return true;
+}
+
+void FileSystem::LoadDirectoryFromSD(const char *path, espnix::Folder *parent)
+{
+    fs::File dir = SD.open(path);
+    if (!dir || !dir.isDirectory())
+    {
+        return;
+    }
+
+    fs::File entry = dir.openNextFile();
+    while (entry)
+    {
+        std::string entryName = entry.name();
+        size_t lastSlash = entryName.find_last_of('/');
+        if (lastSlash != std::string::npos)
+        {
+            entryName = entryName.substr(lastSlash + 1);
+        }
+
+        if (entry.isDirectory())
+        {
+            bool exists = false;
+            espnix::Folder *existingFolder = nullptr;
+
+            for (auto *folder : parent->folders)
+            {
+                if (folder->name == entryName)
+                {
+                    exists = true;
+                    existingFolder = folder;
+                    break;
+                }
+            }
+
+            if (!exists)
+            {
+                espnix::Folder *folder = new espnix::Folder();
+                folder->name = entryName;
+                folder->permissions = 0755;
+                folder->parent = parent;
+                parent->AddFolder(folder);
+                existingFolder = folder;
+            }
+
+            std::string subPath = std::string(path) + "/" + entryName;
+            LoadDirectoryFromSD(subPath.c_str(), existingFolder);
+        }
+        else
+        {
+            bool exists = false;
+            for (auto *file : parent->files)
+            {
+                if (file->name == entryName)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists)
+            {
+                espnix::File *file = new espnix::File();
+                file->name = entryName;
+                file->permissions = 0644;
+                file->size = entry.size();
+
+                std::string content;
+                content.reserve(entry.size());
+                while (entry.available())
+                {
+                    content += (char)entry.read();
+                }
+                file->Write(content);
+
+                parent->AddFile(file);
+            }
+        }
+
+        entry = dir.openNextFile();
+    }
+}
+
+void FileSystem::LoadFromSD()
+{
+    if (!this->sdMounted)
+    {
+        return;
+    }
+
+    BootMessages::PrintInfo("Loading filesystem from SD card");
+
+    if (SD.exists("/espnix"))
+    {
+        LoadDirectoryFromSD("/espnix", this->root);
+        BootMessages::PrintOK("Filesystem loaded from /espnix on SD card");
+    }
+    else
+    {
+        SD.mkdir("/espnix");
+        BootMessages::PrintInfo("Created /espnix directory on SD card");
+    }
+
+    BootMessages::PrintOK("SD card ready for persistence");
+}
+
+void FileSystem::SaveDirectoryToSD(const char *sdPath, espnix::Folder *folder)
+{
+    if (!this->sdMounted)
+    {
+        return;
+    }
+
+    for (auto *subFolder : folder->folders)
+    {
+        std::string newPath = std::string(sdPath) + "/" + subFolder->name;
+        if (!SD.exists(newPath.c_str()))
+        {
+            SD.mkdir(newPath.c_str());
+        }
+        SaveDirectoryToSD(newPath.c_str(), subFolder);
+    }
+
+    for (auto *file : folder->files)
+    {
+        std::string filePath = std::string(sdPath) + "/" + file->name;
+        fs::File sdFile = SD.open(filePath.c_str(), FILE_WRITE);
+        if (sdFile)
+        {
+            sdFile.print(file->Read().c_str());
+            sdFile.close();
+        }
+    }
+}
+
+void FileSystem::SyncToSD()
+{
+    if (!this->sdMounted)
+    {
+        return;
+    }
+
+    SaveDirectoryToSD("/espnix", this->root);
 }
 
 FileSystem *FileSystem::GetInstance()
@@ -83,9 +304,9 @@ std::string FileSystem::GetStringPermissions(int permissions, std::string entryT
     }
 }
 
-Folder *FileSystem::GetFolder(std::string path)
+espnix::Folder *FileSystem::GetFolder(std::string path)
 {
-    Folder *current = this->root;
+    espnix::Folder *current = this->root;
     if (!path.empty() && path[0] != '/')
     {
         path = "/" + path;
@@ -127,7 +348,7 @@ Folder *FileSystem::GetFolder(std::string path)
     return current;
 }
 
-File *FileSystem::GetFile(std::string path)
+espnix::File *FileSystem::GetFile(std::string path)
 {
     if (path[0] != '/' && path != ".")
     {
@@ -161,7 +382,7 @@ File *FileSystem::GetFile(std::string path)
         folderPath += "/" + components[i];
     }
 
-    Folder *folder = this->GetFolder(folderPath.empty() ? "/" : folderPath);
+    espnix::Folder *folder = this->GetFolder(folderPath.empty() ? "/" : folderPath);
     if (folder == nullptr)
     {
         return nullptr;
@@ -182,11 +403,6 @@ File *FileSystem::GetFile(std::string path)
 
 bool FileSystem::FolderExists(std::string path)
 {
-    Folder *folder = this->GetFolder(path);
-    if (folder != nullptr)
-    {
-        return true;
-    }
-
-    return false;
+    espnix::Folder *folder = this->GetFolder(path);
+    return folder != nullptr;
 }

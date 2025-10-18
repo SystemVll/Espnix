@@ -1,24 +1,52 @@
 #include <Arduino.h>
-
 #include <Terminal/Terminal.h>
+#include <Utils/BootMessages.h>
+#include <FileSystem/FileSystem.h>
 #include <SD.h>
-
-#define SD_CS 5
 
 Terminal *terminalFrame;
 
 void setup()
 {
+    Serial.begin(250000);
+    delay(300);
+
+    BootMessages::PrintBanner();
+
+    BootMessages::PrintInfo("Espnix version 1.0 booting...");
+    BootMessages::PrintInfo("Platform: ESP32");
+
+    BootMessages::PrintInfo("Initializing hardware");
+    BootMessages::PrintOK("CPU frequency: " + std::to_string(getCpuFrequencyMhz()) + " MHz");
+    BootMessages::PrintOK("Free heap: " + std::to_string(ESP.getFreeHeap()) + " bytes");
+
+    FileSystem *fileSystem = FileSystem::GetInstance();
+
+    fileSystem->InitializeInitramfs();
+
+    bool sdMounted = fileSystem->MountSDCard();
+
+    if (sdMounted)
+    {
+        fileSystem->LoadFromSD();
+    }
+
+    BootMessages::PrintInfo("Starting terminal subsystem");
     terminalFrame = new Terminal(250000, 1);
 
-    if (!SD.begin(SD_CS))
+    Serial.println("");
+    BootMessages::PrintOK("System boot completed");
+
+    if (fileSystem->inInitramfs)
     {
-        terminalFrame->Write("SD Card initialization failed!\n");
+        BootMessages::PrintWarn("Running in initramfs mode - changes will not persist!");
     }
     else
     {
-        terminalFrame->Write("SD Card initialized successfully.\n");
+        BootMessages::PrintOK("Persistent storage available on SD card");
     }
+
+    Serial.println("");
 }
 
 void loop()
