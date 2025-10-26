@@ -17,7 +17,6 @@ void RunCommand::Execute(const std::vector<std::string> &args, Terminal *termina
     FileSystem *fileSystem = FileSystem::GetInstance();
     std::string bytecodeFilePath = args[0];
 
-    // Check if user accidentally tried to run source file
     if (bytecodeFilePath.length() > 3 &&
         bytecodeFilePath.substr(bytecodeFilePath.length() - 3) == ".es")
     {
@@ -27,14 +26,12 @@ void RunCommand::Execute(const std::vector<std::string> &args, Terminal *termina
         return;
     }
 
-    // Get the bytecode file
     espnix::File *bytecodeFile = fileSystem->GetFile(bytecodeFilePath);
 
     if (bytecodeFile == nullptr)
     {
         terminal->Write("run: error: " + bytecodeFilePath + ": No such file or directory\n");
 
-        // Check if a .es file exists and suggest compiling
         if (bytecodeFilePath.length() > 5 &&
             bytecodeFilePath.substr(bytecodeFilePath.length() - 5) == ".enix")
         {
@@ -53,10 +50,8 @@ void RunCommand::Execute(const std::vector<std::string> &args, Terminal *termina
 
     try
     {
-        // Read bytecode
         std::string bytecodeStr = bytecodeFile->Read();
 
-        // Convert string to byte vector
         std::vector<uint8_t> bytecode;
         bytecode.reserve(bytecodeStr.size());
         for (char c : bytecodeStr)
@@ -64,15 +59,9 @@ void RunCommand::Execute(const std::vector<std::string> &args, Terminal *termina
             bytecode.push_back(static_cast<uint8_t>(c));
         }
 
-        terminal->Write("Executing (" + std::to_string(bytecode.size()) + " bytes)...\n");
-        terminal->Write("--- Output ---\n");
-
-        // Create and run VM
         VirtualMachine vm;
         vm.load(bytecode);
         vm.execute();
-
-        terminal->Write("\n--- Execution complete ---\n");
     }
     catch (const std::exception& e)
     {
@@ -83,21 +72,4 @@ void RunCommand::Execute(const std::vector<std::string> &args, Terminal *termina
         terminal->Write("\nrun: runtime error: Unknown execution error\n");
     }
 }
-#ifndef RUN_COMMAND_H
-#define RUN_COMMAND_H
-
-#include <vector>
-#include <string>
-
-#include <Shell/Commands/ICommand.h>
-
-class Terminal;
-
-class RunCommand : public ICommand
-{
-public:
-    void Execute(const std::vector<std::string> &args, Terminal *terminal, FileDescriptor *input, FileDescriptor *output) override;
-};
-
-#endif
 
