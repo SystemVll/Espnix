@@ -25,6 +25,7 @@ public:
     espnix::Folder *root;
     bool sdMounted;
     bool inInitramfs;
+    bool autoSync;  // Auto-sync files to SD card on write
 
     FileSystem(const FileSystem &) = delete;
     FileSystem &operator=(const FileSystem &) = delete;
@@ -34,6 +35,8 @@ public:
     bool MountSDCard();
     void LoadFromSD();
     void SyncToSD();
+    void SyncFileToSD(espnix::File *file, const std::string &path);
+    void WriteFile(espnix::File *file, const std::string &data, const std::string &path);
     bool IsFirstBoot();
     void CreateDefaultDirectories();
     void MarkInitialized();

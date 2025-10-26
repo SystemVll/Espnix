@@ -215,6 +215,7 @@ void VirtualMachine::execute() {
                 std::string varName = readString();
                 Value value = pop();
                 globals[varName] = value;
+                push(value);
                 break;
             }
 
@@ -275,9 +276,11 @@ void VirtualMachine::execute() {
                 break;
             }
 
-            case OP_PRINT:
-                std::cout << stack.back().toString() << std::endl;
+            case OP_PRINT: {
+                Value val = pop();
+                std::cout << val.toString() << std::endl;
                 break;
+            }
 
             case OP_INPUT: {
                 std::string varName = readString();
@@ -291,8 +294,13 @@ void VirtualMachine::execute() {
                 running = false;
                 break;
 
-            default:
+            default: {
+                // Check if this looks like text/source code (ASCII printable characters)
+                if (opcode >= 32 && opcode <= 126) {
+                    throw std::runtime_error("Invalid bytecode - appears to be source code. Did you try to run a .es file instead of .enix?");
+                }
                 throw std::runtime_error("Unknown opcode: " + std::to_string(opcode));
+            }
         }
     }
 }

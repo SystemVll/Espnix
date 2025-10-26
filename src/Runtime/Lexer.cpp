@@ -3,7 +3,6 @@
 #include <string>
 #include <cstdint>
 
-// Helper function implementations
 bool strEq(const char* a, const char* b) {
     while (*a && *b && *a == *b) { a++; b++; }
     return *a == *b;
@@ -47,7 +46,6 @@ int32_t toInt(const char* str) {
     return negative ? -result : result;
 }
 
-// Lexer implementations
 Lexer::Lexer(const char* src) : source(src), pos(0), line(1) {}
 
 char Lexer::current() {
@@ -101,7 +99,6 @@ void Lexer::identifier() {
     }
     id[i] = '\0';
 
-    // Check keywords
     if (strEq(id, "if")) addToken(TokenType::IF, id);
     else if (strEq(id, "else")) addToken(TokenType::ELSE, id);
     else if (strEq(id, "while")) addToken(TokenType::WHILE, id);
@@ -215,7 +212,7 @@ std::vector<Token>& Lexer::tokenize() {
             advance();
         }
         else {
-            advance(); // Skip unknown characters
+            advance();
         }
     }
 

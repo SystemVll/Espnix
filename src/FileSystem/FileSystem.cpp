@@ -14,6 +14,7 @@ FileSystem::FileSystem()
     this->root = nullptr;
     this->sdMounted = false;
     this->inInitramfs = true;
+    this->autoSync = true;  // Auto-sync enabled by default
     this->currentPath = "/";
 }
 
@@ -28,25 +29,25 @@ void FileSystem::InitializeInitramfs()
     BootMessages::PrintOK("Initramfs mounted at /");
     BootMessages::PrintInfo("Creating initial filesystem structure");
 
-    espnix::Folder *etc = new espnix::Folder();
+    auto *etc = new espnix::Folder();
     etc->name = "etc";
     etc->permissions = 0755;
     etc->parent = this->root;
     this->root->AddFolder(etc);
 
-    espnix::Folder *sys = new espnix::Folder();
+    auto *sys = new espnix::Folder();
     sys->name = "sys";
     sys->permissions = 0755;
     sys->parent = this->root;
     this->root->AddFolder(sys);
 
-    espnix::Folder *tmp = new espnix::Folder();
+    auto *tmp = new espnix::Folder();
     tmp->name = "tmp";
     tmp->permissions = 0777;
     tmp->parent = this->root;
     this->root->AddFolder(tmp);
 
-    espnix::Folder *home = new espnix::Folder();
+    auto *home = new espnix::Folder();
     home->name = "root";
     home->permissions = 0755;
     home->parent = this->root;
@@ -55,7 +56,7 @@ void FileSystem::InitializeInitramfs()
     this->currentPath = "/root";
     this->inInitramfs = true;
 
-    espnix::File *readme = new espnix::File();
+    auto *readme = new espnix::File();
     readme->name = "README.md";
     readme->Write("Welcome to Espnix - a simple Unix-like system for ESP32\n");
     readme->permissions = 0644;
@@ -239,10 +240,22 @@ void FileSystem::SaveDirectoryToSD(const char *sdPath, espnix::Folder *folder)
     for (auto *file : folder->files)
     {
         std::string filePath = std::string(sdPath) + "/" + file->name;
+
+        // Delete existing file to ensure clean write
+        if (SD.exists(filePath.c_str()))
+        {
+            SD.remove(filePath.c_str());
+        }
+
+        // Open file for writing
         fs::File sdFile = SD.open(filePath.c_str(), FILE_WRITE);
         if (sdFile)
         {
-            sdFile.print(file->Read().c_str());
+            // Write binary data (handles both text and binary files)
+            if (file->content != nullptr && file->size > 0)
+            {
+                sdFile.write((const uint8_t*)file->content, file->size);
+            }
             sdFile.close();
         }
     }
@@ -256,6 +269,50 @@ void FileSystem::SyncToSD()
     }
 
     SaveDirectoryToSD("/", this->root);
+}
+
+void FileSystem::SyncFileToSD(espnix::File *file, const std::string &path)
+{
+    if (!this->sdMounted || this->inInitramfs || !this->autoSync)
+    {
+        return;
+    }
+
+    if (file == nullptr || file->content == nullptr || file->size == 0)
+    {
+        return;
+    }
+
+    // Delete existing file to ensure clean write
+    if (SD.exists(path.c_str()))
+    {
+        SD.remove(path.c_str());
+    }
+
+    // Write file to SD card
+    fs::File sdFile = SD.open(path.c_str(), FILE_WRITE);
+    if (sdFile)
+    {
+        sdFile.write((const uint8_t*)file->content, file->size);
+        sdFile.close();
+    }
+}
+
+void FileSystem::WriteFile(espnix::File *file, const std::string &data, const std::string &path)
+{
+    if (file == nullptr)
+    {
+        return;
+    }
+
+    // Write to in-memory file
+    file->Write(data);
+
+    // Auto-sync to SD card if enabled
+    if (this->autoSync && this->sdMounted && !this->inInitramfs)
+    {
+        SyncFileToSD(file, path);
+    }
 }
 
 FileSystem *FileSystem::GetInstance()

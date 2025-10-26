@@ -3,11 +3,9 @@
 #include "Lexer.h"
 #include <vector>
 
-// Compiler constructor
 Compiler::Compiler(std::vector<Token>& toks)
     : tokens(toks), pos(0), labelCount(0), jumpCount(0), labelCounter(0) {}
 
-// Private helper methods
 Token& Compiler::current() {
     return tokens[pos];
 }
@@ -86,7 +84,6 @@ void Compiler::emitJump(uint8_t opcode, const char* labelName) {
     emitInt32(0);
 }
 
-// Public compile method
 std::vector<uint8_t>& Compiler::compile() {
     while (current().type != TokenType::END_OF_FILE) {
         statement();
@@ -94,12 +91,10 @@ std::vector<uint8_t>& Compiler::compile() {
 
     emit(OP_HALT);
 
-    // Resolve jumps
     for (size_t i = 0; i < jumpCount; i++) {
         size_t jumpPos = jumps[i].position;
         const char* labelName = jumps[i].label;
 
-        // Find label
         int32_t target = -1;
         for (size_t j = 0; j < labelCount; j++) {
             if (strEq(labels[j].name, labelName)) {
@@ -119,7 +114,6 @@ std::vector<uint8_t>& Compiler::compile() {
     return code;
 }
 
-// Statement parsing methods
 void Compiler::statement() {
     if (match(TokenType::VAR)) {
         varDeclaration();
@@ -217,7 +211,6 @@ void Compiler::expressionStatement() {
     match(TokenType::SEMICOLON);
 }
 
-// Expression parsing methods
 void Compiler::expression() {
     if (current().type == TokenType::IDENTIFIER && peek().type == TokenType::ASSIGN) {
         char name[32];

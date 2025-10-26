@@ -17,12 +17,35 @@ void RunCommand::Execute(const std::vector<std::string> &args, Terminal *termina
     FileSystem *fileSystem = FileSystem::GetInstance();
     std::string bytecodeFilePath = args[0];
 
+    // Check if user accidentally tried to run source file
+    if (bytecodeFilePath.length() > 3 &&
+        bytecodeFilePath.substr(bytecodeFilePath.length() - 3) == ".es")
+    {
+        terminal->Write("run: error: cannot execute source file '" + bytecodeFilePath + "'\n");
+        terminal->Write("  Did you mean: run " + bytecodeFilePath.substr(0, bytecodeFilePath.length() - 3) + ".enix\n");
+        terminal->Write("  First compile with: compile " + bytecodeFilePath + "\n");
+        return;
+    }
+
     // Get the bytecode file
     espnix::File *bytecodeFile = fileSystem->GetFile(bytecodeFilePath);
 
     if (bytecodeFile == nullptr)
     {
         terminal->Write("run: error: " + bytecodeFilePath + ": No such file or directory\n");
+
+        // Check if a .es file exists and suggest compiling
+        if (bytecodeFilePath.length() > 5 &&
+            bytecodeFilePath.substr(bytecodeFilePath.length() - 5) == ".enix")
+        {
+            std::string sourceFile = bytecodeFilePath.substr(0, bytecodeFilePath.length() - 5) + ".es";
+            if (fileSystem->GetFile(sourceFile) != nullptr)
+            {
+                terminal->Write("  Found source file: " + sourceFile + "\n");
+                terminal->Write("  Compile it first: compile " + sourceFile + "\n");
+            }
+        }
+
         return;
     }
 

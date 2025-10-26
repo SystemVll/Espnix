@@ -14,9 +14,10 @@ namespace espnix
 
     std::string File::Read()
     {
-        if (this->content)
+        if (this->content && this->size > 0)
         {
-            return std::string(this->content);
+            // Use size parameter to support binary data with null bytes
+            return std::string(this->content, this->size);
         }
         return "";
     }
@@ -24,11 +25,13 @@ namespace espnix
     void File::Write(std::string data)
     {
         this->Remove();
-        this->content = static_cast<char*>(malloc(data.size() + 1));
+        this->size = data.size();
+        this->content = static_cast<char*>(malloc(this->size + 1));
         if (this->content)
         {
-            strcpy(this->content, data.c_str());
-            this->size = data.size();
+            // Use memcpy to support binary data (including null bytes)
+            memcpy(this->content, data.c_str(), this->size);
+            this->content[this->size] = '\0';  // Null terminate for safety
         }
         else
         {

@@ -1,12 +1,13 @@
+#include "CompileCommand.h"
 #include <Terminal/Terminal.h>
 #include <FileSystem/FileSystem.h>
 #include <FileSystem/File.h>
+#include <FileSystem/Folder.h>
 #include <Runtime/Lexer.h>
 #include <Runtime/Compiler.h>
 #include <sstream>
 #include <vector>
 
-#include "CompileCommand.h"
 
 void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *terminal, FileDescriptor *input, FileDescriptor *output)
 {
@@ -46,26 +47,27 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
         }
     }
 
+    if (!outputFilePath.empty() && outputFilePath[0] != '/')
+    {
+        outputFilePath = fileSystem->currentPath + "/" + outputFilePath;
+    }
+
     terminal->Write("Compiling " + sourceFilePath + "...\n");
 
     try
     {
-        // Read source code
         std::string sourceCode = sourceFile->Read();
 
-        // Tokenize the source code
         Lexer lexer(sourceCode.c_str());
         std::vector<Token>& tokens = lexer.tokenize();
 
         terminal->Write("Lexical analysis complete (" + std::to_string(tokens.size()) + " tokens)\n");
 
-        // Compile tokens to bytecode
         Compiler compiler(tokens);
         std::vector<uint8_t>& bytecode = compiler.compile();
 
         terminal->Write("Compilation complete (" + std::to_string(bytecode.size()) + " bytes)\n");
 
-        // Convert bytecode to string for file writing
         std::string bytecodeStr;
         bytecodeStr.reserve(bytecode.size());
         for (uint8_t byte : bytecode)
@@ -73,13 +75,13 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
             bytecodeStr.push_back(static_cast<char>(byte));
         }
 
-        // Check if output file already exists
         espnix::File *outputFile = fileSystem->GetFile(outputFilePath);
 
         if (outputFile != nullptr)
         {
-            // File exists, overwrite it
-            outputFile->Write(bytecodeStr);
+            // File exists, overwrite using WriteFile for auto-sync
+            fileSystem->WriteFile(outputFile, bytecodeStr, outputFilePath);
+            terminal->Write("Binary file size : " + std::to_string(bytecodeStr.size()) + " bytes\n");
             terminal->Write("Output written to " + outputFilePath + " (overwritten)\n");
         }
         else
@@ -89,13 +91,37 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
                 ? outputFilePath.substr(lastSlash + 1)
                 : outputFilePath;
 
+            std::string folderPath;
+            if (lastSlash != std::string::npos)
+            {
+                folderPath = outputFilePath.substr(0, lastSlash);
+                if (folderPath.empty()) folderPath = "/";
+            }
+            else
+            {
+                folderPath = fileSystem->currentPath;
+            }
+
+            espnix::Folder *targetFolder = fileSystem->GetFolder(folderPath);
+            if (targetFolder == nullptr)
+            {
+                terminal->Write("compile: error: directory not found: " + folderPath + "\n");
+                return;
+            }
+
             espnix::File *newFile = new espnix::File();
             newFile->name = fileName;
-            newFile->Write(bytecodeStr);
+            newFile->permissions = 0644;
 
+            // Write content using WriteFile for auto-sync
+            fileSystem->WriteFile(newFile, bytecodeStr, outputFilePath);
+
+            targetFolder->AddFile(newFile);
+            terminal->Write("Binary file size : " + std::to_string(bytecodeStr.size()) + " bytes\n");
             terminal->Write("Output written to " + outputFilePath + "\n");
         }
 
+        // Auto-sync handled by WriteFile, no manual sync needed
         terminal->Write("Compilation successful!\n");
     }
     catch (const std::exception& e)
