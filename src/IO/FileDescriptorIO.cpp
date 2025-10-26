@@ -19,4 +19,5 @@ ssize_t FileDescriptor::read(void *buffer, size_t count)
 ssize_t FileDescriptor::write(const void *buffer, size_t count)
 {
     this->data = std::string((char *)buffer, count);
+    return count;
 }

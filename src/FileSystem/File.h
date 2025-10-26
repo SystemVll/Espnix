@@ -3,20 +3,23 @@
 
 #include <string>
 
-class File
+namespace espnix
 {
-public:
-    std::string name;
-    char *content;
-    int owner;
-    int permissions;
-    int size;
-    long creationDate;
+    class File
+    {
+    public:
+        std::string name;
+        char *content;
+        int owner;
+        int permissions;
+        int size;
+        long creationDate;
 
-    File();
-    std::string Read();
-    void Write(std::string data);
-    void Remove();
-};
+        File();
+        std::string Read();
+        void Write(std::string data);
+        void Remove();
+    };
+}
 
 #endif
