@@ -19,6 +19,8 @@
 #include <Shell/Commands/System/EchoCommand.h>
 #include <Shell/Commands/System/CatCommand.h>
 #include <Shell/Commands/System/ClearCommand.h>
+#include <Shell/Commands/System/CompileCommand.h>
+#include <Shell/Commands/System/RunCommand.h>
 
 #include <Shell/Commands/Other/IwctlCommand.h>
 
@@ -34,8 +36,10 @@ Shell::Shell() : terminal(nullptr)
     commandRegistry["mkdir"] = std::make_shared<MakeDirectoryCommand>();
     commandRegistry["cat"] = std::make_shared<CatCommand>();
     commandRegistry["clear"] = std::make_shared<ClearCommand>();
+    commandRegistry["compile"] = std::make_shared<CompileCommand>();
+    commandRegistry["run"] = std::make_shared<RunCommand>();
 
-    BootMessages::PrintOK("Registered 6 built-in commands");
+    BootMessages::PrintOK("Registered 8 built-in commands");
 
     BootMessages::PrintInfo("Loading additional modules");
     commandRegistry["iwctl"] = std::make_shared<IwctlCommand>();

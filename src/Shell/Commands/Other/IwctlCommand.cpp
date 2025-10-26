@@ -38,13 +38,15 @@ void IwctlCommand::Execute(const std::vector<std::string> &args, Terminal *termi
             }
             return;
         }
-        else if (args.size() > 1 && args[1] == "on")
+
+        if (args.size() > 1 && args[1] == "on")
         {
             WiFi.mode(WIFI_STA);
             terminal->Write("WiFi device turned on\n");
             return;
         }
-        else if (args.size() > 1 && args[1] == "off")
+
+        if (args.size() > 1 && args[1] == "off")
         {
             WiFi.mode(WIFI_OFF);
             terminal->Write("WiFi device turned off\n");

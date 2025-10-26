@@ -25,6 +25,12 @@ public:
         Serial.println(message.c_str());
     }
 
+    static void PrintError(const std::string &message)
+    {
+        Serial.print("[\033[31mERROR\033[0m] ");
+        Serial.println(message.c_str());
+    }
+
     static void PrintFail(const std::string &message)
     {
         Serial.print("[ \033[31mFAIL\033[0m ] ");

@@ -31,12 +31,6 @@ void setup()
         fileSystem->LoadFromSD();
     }
 
-    BootMessages::PrintInfo("Starting terminal subsystem");
-    terminalFrame = new Terminal(250000, 1);
-
-    Serial.println("");
-    BootMessages::PrintOK("System boot completed");
-
     if (fileSystem->inInitramfs)
     {
         BootMessages::PrintWarn("Running in initramfs mode - changes will not persist!");
@@ -46,7 +40,7 @@ void setup()
         BootMessages::PrintOK("Persistent storage available on SD card");
     }
 
-    Serial.println("");
+    terminalFrame = new Terminal(250000, 1);
 }
 
 void loop()

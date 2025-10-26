@@ -28,17 +28,17 @@ void FileSystem::InitializeInitramfs()
     BootMessages::PrintOK("Initramfs mounted at /");
     BootMessages::PrintInfo("Creating initial filesystem structure");
 
-    espnix::File *readme = new espnix::File();
-    readme->name = "README.md";
-    readme->Write("Welcome to Espnix - a simple Unix-like system for ESP32\n");
-    readme->permissions = 0644;
-    this->root->AddFile(readme);
-
     espnix::Folder *etc = new espnix::Folder();
     etc->name = "etc";
     etc->permissions = 0755;
     etc->parent = this->root;
     this->root->AddFolder(etc);
+
+    espnix::Folder *sys = new espnix::Folder();
+    sys->name = "sys";
+    sys->permissions = 0755;
+    sys->parent = this->root;
+    this->root->AddFolder(sys);
 
     espnix::Folder *tmp = new espnix::Folder();
     tmp->name = "tmp";
@@ -47,13 +47,19 @@ void FileSystem::InitializeInitramfs()
     this->root->AddFolder(tmp);
 
     espnix::Folder *home = new espnix::Folder();
-    home->name = "home";
+    home->name = "root";
     home->permissions = 0755;
     home->parent = this->root;
     this->root->AddFolder(home);
 
-    this->currentPath = "/";
+    this->currentPath = "/root";
     this->inInitramfs = true;
+
+    espnix::File *readme = new espnix::File();
+    readme->name = "README.md";
+    readme->Write("Welcome to Espnix - a simple Unix-like system for ESP32\n");
+    readme->permissions = 0644;
+    this->root->AddFile(readme);
 
     BootMessages::PrintOK("Initramfs initialized (tmpfs mode)");
 }
@@ -64,16 +70,20 @@ bool FileSystem::MountSDCard()
 
     if (!SD.begin())
     {
-        BootMessages::PrintWarn("SD card initialization failed");
+        BootMessages::PrintError("SD card initialization failed!");
+        BootMessages::PrintWarn("No SD card detected or card is not properly inserted");
         BootMessages::PrintInfo("Continuing with initramfs only (no persistence)");
+        BootMessages::PrintWarn("All changes will be lost on reboot!");
         return false;
     }
 
     uint8_t cardType = SD.cardType();
     if (cardType == CARD_NONE)
     {
-        BootMessages::PrintWarn("No SD card attached");
+        BootMessages::PrintError("No SD card attached!");
+        BootMessages::PrintWarn("Please insert an SD card for persistent storage");
         BootMessages::PrintInfo("Continuing with initramfs only (no persistence)");
+        BootMessages::PrintWarn("All changes will be lost on reboot!");
         return false;
     }
 
@@ -91,12 +101,27 @@ bool FileSystem::MountSDCard()
     BootMessages::PrintOK("SD card detected: " + cardTypeStr + " (" + std::to_string(cardSize) + " MB)");
 
     this->sdMounted = true;
-    this->inInitramfs = false;
 
-    BootMessages::PrintInfo("Switching root filesystem to SD card");
-    BootMessages::PrintOK("Root filesystem mounted from SD card (read/write)");
     BootMessages::PrintInfo("Total space: " + std::to_string(SD.totalBytes() / (1024 * 1024)) + " MB");
     BootMessages::PrintInfo("Free space: " + std::to_string((SD.totalBytes() - SD.usedBytes()) / (1024 * 1024)) + " MB");
+
+    // Check if this is the first boot
+    if (IsFirstBoot())
+    {
+        BootMessages::PrintInfo("First boot detected - initializing filesystem structure");
+        CreateDefaultDirectories();
+        MarkInitialized();
+        BootMessages::PrintOK("Default directories created on SD card");
+    }
+    else
+    {
+        BootMessages::PrintInfo("Existing filesystem detected on SD card");
+    }
+
+    // Switch from initramfs to SD card
+    this->inInitramfs = false;
+    BootMessages::PrintInfo("Switching root filesystem to SD card");
+    BootMessages::PrintOK("Root filesystem mounted from SD card (read/write)");
 
     return true;
 }
@@ -190,19 +215,8 @@ void FileSystem::LoadFromSD()
     }
 
     BootMessages::PrintInfo("Loading filesystem from SD card");
-
-    if (SD.exists("/espnix"))
-    {
-        LoadDirectoryFromSD("/espnix", this->root);
-        BootMessages::PrintOK("Filesystem loaded from /espnix on SD card");
-    }
-    else
-    {
-        SD.mkdir("/espnix");
-        BootMessages::PrintInfo("Created /espnix directory on SD card");
-    }
-
-    BootMessages::PrintOK("SD card ready for persistence");
+    LoadDirectoryFromSD("/", this->root);
+    BootMessages::PrintOK("Filesystem mounted at / on SD card");
 }
 
 void FileSystem::SaveDirectoryToSD(const char *sdPath, espnix::Folder *folder)
@@ -241,7 +255,7 @@ void FileSystem::SyncToSD()
         return;
     }
 
-    SaveDirectoryToSD("/espnix", this->root);
+    SaveDirectoryToSD("/", this->root);
 }
 
 FileSystem *FileSystem::GetInstance()
@@ -406,3 +420,133 @@ bool FileSystem::FolderExists(std::string path)
     espnix::Folder *folder = this->GetFolder(path);
     return folder != nullptr;
 }
+
+bool FileSystem::IsFirstBoot()
+{
+    if (!this->sdMounted)
+    {
+        return false;
+    }
+
+    // Check if /sys/.init exists on SD card
+    return !SD.exists("/sys/.init");
+}
+
+void FileSystem::CreateDefaultDirectories()
+{
+    if (!this->sdMounted)
+    {
+        BootMessages::PrintWarn("Cannot create default directories - SD card not mounted");
+        return;
+    }
+
+    BootMessages::PrintInfo("Creating default directory structure on SD card");
+
+    // Create default directories
+    const char* defaultDirs[] = {
+        "/bin",      // System binaries
+        "/boot",     // Boot configuration
+        "/dev",      // Device files
+        "/etc",      // Configuration files
+        "/home",     // User home directories
+        "/lib",      // System libraries
+        "/mnt",      // Mount points
+        "/opt",      // Optional software
+        "/proc",     // Process information
+        "/root",     // Root user home
+        "/run",      // Runtime data
+        "/sbin",     // System binaries
+        "/srv",      // Service data
+        "/sys",      // System information
+        "/tmp",      // Temporary files
+        "/usr",      // User programs
+        "/usr/bin",  // User binaries
+        "/usr/lib",  // User libraries
+        "/usr/local",// Local software
+        "/var",      // Variable data
+        "/var/log",  // Log files
+        "/var/tmp"   // Temporary files
+    };
+
+    for (const char* dir : defaultDirs)
+    {
+        if (!SD.exists(dir))
+        {
+            if (SD.mkdir(dir))
+            {
+                BootMessages::PrintOK("Created: " + std::string(dir));
+            }
+            else
+            {
+                BootMessages::PrintWarn("Failed to create: " + std::string(dir));
+            }
+        }
+    }
+
+    // Create a welcome file in /root
+    fs::File welcomeFile = SD.open("/root/README.txt", FILE_WRITE);
+    if (welcomeFile)
+    {
+        welcomeFile.println("Welcome to Espnix!");
+        welcomeFile.println("");
+        welcomeFile.println("This is a Unix-like operating system for ESP32.");
+        welcomeFile.println("Your files are stored on the SD card for persistence.");
+        welcomeFile.println("");
+        welcomeFile.println("System initialized on: October 26, 2025");
+        welcomeFile.println("");
+        welcomeFile.println("Available commands:");
+        welcomeFile.println("  ls      - List directory contents");
+        welcomeFile.println("  cd      - Change directory");
+        welcomeFile.println("  cat     - Display file contents");
+        welcomeFile.println("  echo    - Print text");
+        welcomeFile.println("  mkdir   - Create directory");
+        welcomeFile.println("  clear   - Clear screen");
+        welcomeFile.println("  compile - Compile source code to bytecode");
+        welcomeFile.println("  run     - Execute compiled bytecode");
+        welcomeFile.println("");
+        welcomeFile.println("For more information, check /etc/motd");
+        welcomeFile.close();
+        BootMessages::PrintOK("Created welcome file: /root/README.txt");
+    }
+
+    // Create message of the day
+    fs::File motdFile = SD.open("/etc/motd", FILE_WRITE);
+    if (motdFile)
+    {
+        motdFile.println("╔══════════════════════════════════════════════════╗");
+        motdFile.println("║            Welcome to Espnix v1.0                 ║");
+        motdFile.println("║         Unix-like OS for ESP32                    ║");
+        motdFile.println("╚══════════════════════════════════════════════════╝");
+        motdFile.println("");
+        motdFile.println("Type 'help' for available commands.");
+        motdFile.close();
+        BootMessages::PrintOK("Created: /etc/motd");
+    }
+
+    BootMessages::PrintOK("Default filesystem structure created");
+}
+
+void FileSystem::MarkInitialized()
+{
+    if (!this->sdMounted)
+    {
+        return;
+    }
+
+    // Create the .init marker file in /sys
+    fs::File initFile = SD.open("/sys/.init", FILE_WRITE);
+    if (initFile)
+    {
+        initFile.println("# Espnix initialization marker");
+        initFile.println("# Created: October 26, 2025");
+        initFile.println("# This file indicates that the filesystem has been initialized.");
+        initFile.println("# Do not delete this file unless you want to reinitialize the system.");
+        initFile.close();
+        BootMessages::PrintOK("Created initialization marker: /sys/.init");
+    }
+    else
+    {
+        BootMessages::PrintWarn("Failed to create initialization marker");
+    }
+}
+

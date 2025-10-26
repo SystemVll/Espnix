@@ -34,6 +34,9 @@ public:
     bool MountSDCard();
     void LoadFromSD();
     void SyncToSD();
+    bool IsFirstBoot();
+    void CreateDefaultDirectories();
+    void MarkInitialized();
     std::string GetStringPermissions(int permissions, std::string entryType);
     espnix::File *GetFile(std::string path);
     espnix::Folder *GetFolder(std::string path);
