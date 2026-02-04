@@ -1,6 +1,5 @@
 #include <iostream>
 #include <vector>
-#include <cstdint>
 #include <string>
 #include <stdexcept>
 
@@ -287,6 +286,12 @@ void VirtualMachine::execute() {
                 int32_t value;
                 std::cin >> value;
                 globals[varName] = Value(value);
+                break;
+            }
+
+            case OP_SLEEP: {
+                int32_t seconds = pop().toInt();
+                sleep(seconds);
                 break;
             }
 

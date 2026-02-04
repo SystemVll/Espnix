@@ -51,6 +51,7 @@ enum Opcode {
     OP_INPUT,       // Read input into variable
 
     // System
+    OP_SLEEP,       // Sleep for specified seconds
     OP_HALT         // Stop execution
 };
 
