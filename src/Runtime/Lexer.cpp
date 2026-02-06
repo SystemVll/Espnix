@@ -104,6 +104,7 @@ void Lexer::identifier() {
     else if (strEq(id, "while")) addToken(TokenType::WHILE, id);
     else if (strEq(id, "var")) addToken(TokenType::VAR, id);
     else if (strEq(id, "print")) addToken(TokenType::PRINT, id);
+    else if (strEq(id, "sleep")) addToken(TokenType::SLEEP, id);
     else if (strEq(id, "and")) addToken(TokenType::AND, id);
     else if (strEq(id, "or")) addToken(TokenType::OR, id);
     else if (strEq(id, "not")) addToken(TokenType::NOT, id);

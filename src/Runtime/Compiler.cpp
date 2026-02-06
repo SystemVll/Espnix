@@ -126,6 +126,8 @@ void Compiler::statement() {
     }
     else if (match(TokenType::PRINT)) {
         printStatement();
+    } else if (match(TokenType::SLEEP)) {
+        sleepStatement();
     }
     else if (match(TokenType::LBRACE)) {
         block();
@@ -188,6 +190,14 @@ void Compiler::whileStatement() {
     statement();
     emitJump(OP_JMP, startLabel);
     label(endLabel);
+}
+
+void Compiler::sleepStatement() {
+    match(TokenType::LPAREN);
+    expression();
+    match(TokenType::RPAREN);
+    emit(OP_SLEEP);
+    match(TokenType::SEMICOLON);
 }
 
 void Compiler::printStatement() {

@@ -44,6 +44,7 @@ private:
     void ifStatement();
     void whileStatement();
     void printStatement();
+    void sleepStatement();
     void block();
     void expressionStatement();
 

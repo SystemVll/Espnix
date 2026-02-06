@@ -34,7 +34,7 @@ int32_t toInt(const char* str);
 // Token types
 enum class TokenType {
     NUMBER, IDENTIFIER,
-    IF, ELSE, WHILE, VAR, PRINT,
+    IF, ELSE, WHILE, VAR, PRINT, SLEEP,
     PLUS, MINUS, STAR, SLASH, PERCENT,
     ASSIGN, EQ, NE, LT, LE, GT, GE,
     AND, OR, NOT,
