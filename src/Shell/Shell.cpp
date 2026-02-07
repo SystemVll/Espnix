@@ -6,7 +6,7 @@
 
 #include <FileSystem/FileSystem.h>
 
-#include <IO/FileDescriptorIO.h>
+#include <IO/FileDescriptor.h>
 
 #include <Terminal/Terminal.h>
 #include <Utils/BootMessages.h>
@@ -18,6 +18,7 @@
 #include <Shell/Commands/System/MakeDirectoryCommand.h>
 #include <Shell/Commands/System/EchoCommand.h>
 #include <Shell/Commands/System/CatCommand.h>
+#include <Shell/Commands/System/EvimCommand.h>
 #include <Shell/Commands/System/ClearCommand.h>
 #include <Shell/Commands/System/CompileCommand.h>
 #include <Shell/Commands/System/RunCommand.h>
@@ -35,6 +36,7 @@ Shell::Shell() : terminal(nullptr)
     commandRegistry["echo"] = std::make_shared<EchoCommand>();
     commandRegistry["mkdir"] = std::make_shared<MakeDirectoryCommand>();
     commandRegistry["cat"] = std::make_shared<CatCommand>();
+    commandRegistry["evim"] = std::make_shared<EvimCommand>();
     commandRegistry["clear"] = std::make_shared<ClearCommand>();
     commandRegistry["compile"] = std::make_shared<CompileCommand>();
     commandRegistry["run"] = std::make_shared<RunCommand>();
@@ -65,8 +67,8 @@ void Shell::Interpret(const std::string &input)
         auto it = commandRegistry.find(command);
         if (it != commandRegistry.end())
         {
-            FileDescriptor *stdin_fd = new FileDescriptor(0);
-            FileDescriptor *stdout_fd = new FileDescriptor(1);
+            auto *stdin_fd = new FileDescriptor(0);
+            auto *stdout_fd = new FileDescriptor(1);
 
             terminal->Write("\n");
             it->second->Execute(args, terminal, stdin_fd, stdout_fd);

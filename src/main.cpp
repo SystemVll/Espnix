@@ -2,7 +2,6 @@
 #include <Terminal/Terminal.h>
 #include <Utils/BootMessages.h>
 #include <FileSystem/FileSystem.h>
-#include <SD.h>
 
 Terminal *terminalFrame;
 

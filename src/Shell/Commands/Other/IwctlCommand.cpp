@@ -1,7 +1,7 @@
 #include "IwctlCommand.h"
 
 #include <Terminal/Terminal.h>
-#include <IO/FileDescriptorIO.h>
+#include <IO/FileDescriptor.h>
 #include "WiFi.h"
 
 void IwctlCommand::Execute(const std::vector<std::string> &args, Terminal *terminal, FileDescriptor *input, FileDescriptor *output)
