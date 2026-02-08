@@ -1,7 +1,6 @@
 #ifndef FILE_DESCRIPTOR_IO_H
 #define FILE_DESCRIPTOR_IO_H
 
-#include <fcntl.h>
 #include <vector>
 #include <string>
 #include <SD.h>

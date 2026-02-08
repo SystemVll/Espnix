@@ -17,7 +17,7 @@ namespace espnix
         std::vector<File *> files;
         std::vector<Folder *> folders;
         std::vector<FileSystemEntity *> entities;  // Unified collection
-        Folder *current;
+        Folder *current{};
 
         Folder();
         void AddFile(File *file);
