@@ -271,16 +271,16 @@ void FileSystem::SyncToSD()
     SaveDirectoryToSD("/", this->root);
 }
 
-void FileSystem::SyncFileToSD(espnix::File *file, const std::string &path)
+int FileSystem::SyncFileToSD(espnix::File *file, const std::string &path)
 {
     if (!this->sdMounted || this->inInitramfs || !this->autoSync)
     {
-        return;
+        return -1;
     }
 
     if (file == nullptr || file->content == nullptr || file->size == 0)
     {
-        return;
+        return -1;
     }
 
     // Delete existing file to ensure clean write
@@ -296,6 +296,8 @@ void FileSystem::SyncFileToSD(espnix::File *file, const std::string &path)
         sdFile.write((const uint8_t*)file->content, file->size);
         sdFile.close();
     }
+
+    return 0;
 }
 
 void FileSystem::WriteFile(espnix::File *file, const std::string &data, const std::string &path)

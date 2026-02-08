@@ -35,7 +35,7 @@ public:
     bool MountSDCard();
     void LoadFromSD();
     void SyncToSD();
-    void SyncFileToSD(espnix::File *file, const std::string &path);
+    int SyncFileToSD(espnix::File *file, const std::string &path);
     void WriteFile(espnix::File *file, const std::string &data, const std::string &path);
     bool IsFirstBoot();
     void CreateDefaultDirectories();

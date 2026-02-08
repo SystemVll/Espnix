@@ -9,7 +9,9 @@ namespace espnix
     {
         this->permissions = 0777;
         this->content = nullptr;
+        this->owner = 0;
         this->size = 0;
+        this->creationDate = 0;
     }
 
     std::string File::Read()
@@ -42,6 +44,8 @@ namespace espnix
 
     void File::Write(std::string data)
     {
+        free(this->content);
+
         this->size = data.size();
         this->content = static_cast<char*>(malloc(this->size + 1));
         if (this->content)
@@ -56,10 +60,7 @@ namespace espnix
         }
     }
 
-    void File::Remove()
-    {
+    File::~File() {
         free(this->content);
-        this->content = nullptr;
-        this->size = 0;
     }
 }

@@ -62,4 +62,16 @@ namespace espnix
             }
         }
     }
+
+    Folder::~Folder()
+    {
+        for (const auto &file : this->files)
+        {
+            delete file;
+        }
+        for (const auto &folder : this->folders)
+        {
+            delete folder;
+        }
+    }
 }
