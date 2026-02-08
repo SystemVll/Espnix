@@ -22,9 +22,26 @@ namespace espnix
         return "";
     }
 
+    void File::Append(std::string data)
+    {
+        const size_t newSize = this->size + data.size();
+        const auto newContent = static_cast<char*>(malloc(newSize + 1));
+        if (newContent)
+        {
+            if (this->content)
+            {
+                memcpy(newContent, this->content, this->size);
+                free(this->content);
+            }
+            memcpy(newContent + this->size, data.c_str(), data.size());
+            newContent[newSize] = '\0';  // Null terminate for safety
+            this->content = newContent;
+            this->size = newSize;
+        }
+    }
+
     void File::Write(std::string data)
     {
-        this->Remove();
         this->size = data.size();
         this->content = static_cast<char*>(malloc(this->size + 1));
         if (this->content)
