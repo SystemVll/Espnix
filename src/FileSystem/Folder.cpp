@@ -45,6 +45,8 @@ namespace espnix
         {
             if (this->files[i]->name == filename)
             {
+                delete this->files[i];
+
                 this->files.erase(this->files.begin() + i);
                 break;
             }
@@ -57,6 +59,8 @@ namespace espnix
         {
             if (this->folders[i]->name == foldername)
             {
+                delete this->folders[i];
+
                 this->folders.erase(this->folders.begin() + i);
                 break;
             }
@@ -69,6 +73,7 @@ namespace espnix
         {
             delete file;
         }
+
         for (const auto &folder : this->folders)
         {
             delete folder;
