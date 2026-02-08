@@ -37,25 +37,13 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
     // If file doesn't exist, create it
     if (file == nullptr)
     {
-        // Create a new file
-        file = new espnix::File();
-        file->name = filePath;
-        file->content = nullptr;
-        file->size = 0;
-        file->permissions = 0644;
-        file->owner = 0;
-
-        // Find the parent directory and add the file
-        // For simplicity, assume files are created in current directory
-        espnix::Folder *currentFolder = fileSystem->GetFolder(fileSystem->currentPath);
-        if (currentFolder == nullptr)
+        // Create a new file using FileSystem
+        file = fileSystem->CreateFile(filePath, 0644);
+        if (file == nullptr)
         {
-            terminal->Write("evim: cannot create " + filePath + ": Invalid current directory\n");
-            delete file;
+            terminal->Write("Error: Could not create file " + filePath + "\n");
             return;
         }
-
-        currentFolder->AddFile(file);
         terminal->Write("evim: " + filePath + ": New file\n");
     }
 

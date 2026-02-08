@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <string>
+#include <fcntl.h>
 #include <SD.h>
 
 namespace espnix
@@ -10,6 +11,8 @@ namespace espnix
     class Folder;
     class File;
 }
+
+class FileDescriptor;
 
 class FileSystem
 {
@@ -35,8 +38,11 @@ public:
     bool MountSDCard();
     void LoadFromSD();
     void SyncToSD();
+
     int SyncFileToSD(espnix::File *file, const std::string &path);
     void WriteFile(espnix::File *file, const std::string &data, const std::string &path);
+    espnix::File* CreateFile(const std::string &path, int permissions = 0644);
+    FileDescriptor* OpenFile(const std::string &path, int flags = O_RDWR);
     bool IsFirstBoot();
     void CreateDefaultDirectories();
     void MarkInitialized();

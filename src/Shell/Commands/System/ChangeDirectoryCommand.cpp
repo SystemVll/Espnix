@@ -11,7 +11,7 @@ void ChangeDirectoryCommand::Execute(const std::vector<std::string> &args, Termi
         return;
     }
 
-    std::string path = args[0];
+    const std::string& path = args[0];
     FileSystem *fileSystem = FileSystem::GetInstance();
 
     if (path == ".")

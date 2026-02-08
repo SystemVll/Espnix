@@ -13,7 +13,7 @@ void CatCommand::Execute(const std::vector<std::string> &args, Terminal *termina
     }
 
     FileSystem *fileSystem = FileSystem::GetInstance();
-    std::string filePath = args[0];
+    const std::string& filePath = args[0];
     espnix::File *file = fileSystem->GetFile(filePath);
 
     if (file == nullptr)

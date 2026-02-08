@@ -4,22 +4,20 @@
 #include <string>
 #include <vector>
 
+#include "FileSystemEntity.h"
+
 namespace espnix
 {
     class File;
     class Folder;
 
-    class Folder
+    class Folder : public FileSystemEntity
     {
     public:
-        std::string name;
         std::vector<File *> files;
         std::vector<Folder *> folders;
-        Folder *parent;
+        std::vector<FileSystemEntity *> entities;  // Unified collection
         Folder *current;
-        int owner;
-        int permissions;
-        long creationDate;
 
         Folder();
         void AddFile(File *file);
@@ -27,6 +25,10 @@ namespace espnix
         std::vector<void *> ListContent();
         void RemoveFile(std::string filename);
         void RemoveFolder(std::string foldername);
+
+        // Virtual method implementations
+        std::string GetDisplayName() const override;
+        size_t GetSize() const override;
 
         ~Folder();
     };

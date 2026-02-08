@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <sstream>
+#include <ctime>
 
 #include <FileSystem/Folder.h>
-#include <FileSystem/file.h>
+#include <FileSystem/File.h>
 #include <Utils/BootMessages.h>
 
 #include "FileSystem.h"
@@ -129,13 +130,13 @@ bool FileSystem::MountSDCard()
 
 void FileSystem::LoadDirectoryFromSD(const char *path, espnix::Folder *parent)
 {
-    fs::File dir = SD.open(path);
+    File dir = SD.open(path);
     if (!dir || !dir.isDirectory())
     {
         return;
     }
 
-    fs::File entry = dir.openNextFile();
+    File entry = dir.openNextFile();
     while (entry)
     {
         std::string entryName = entry.name();
@@ -190,16 +191,9 @@ void FileSystem::LoadDirectoryFromSD(const char *path, espnix::Folder *parent)
                 espnix::File *file = new espnix::File();
                 file->name = entryName;
                 file->permissions = 0644;
-                file->size = entry.size();
 
-                std::string content;
-                content.reserve(entry.size());
-                while (entry.available())
-                {
-                    content += (char)entry.read();
-                }
-                file->Write(content);
-
+                // Don't store content directly in file anymore
+                // FileDescriptor will handle this when the file is opened
                 parent->AddFile(file);
             }
         }
@@ -247,16 +241,18 @@ void FileSystem::SaveDirectoryToSD(const char *sdPath, espnix::Folder *folder)
             SD.remove(filePath.c_str());
         }
 
-        // Open file for writing
-        fs::File sdFile = SD.open(filePath.c_str(), FILE_WRITE);
-        if (sdFile)
+        // Get data from file using Read() method (which uses FileDescriptor)
+        std::string data = file->Read();
+
+        if (!data.empty())
         {
-            // Write binary data (handles both text and binary files)
-            if (file->content != nullptr && file->size > 0)
+            // Open file for writing
+            File sdFile = SD.open(filePath.c_str(), FILE_WRITE);
+            if (sdFile)
             {
-                sdFile.write((const uint8_t*)file->content, file->size);
+                sdFile.write((const uint8_t*)data.c_str(), data.length());
+                sdFile.close();
             }
-            sdFile.close();
         }
     }
 }
@@ -278,7 +274,24 @@ int FileSystem::SyncFileToSD(espnix::File *file, const std::string &path)
         return -1;
     }
 
-    if (file == nullptr || file->content == nullptr || file->size == 0)
+    if (file == nullptr)
+    {
+        return -1;
+    }
+
+    // Get data from FileDescriptor buffer
+    std::string data;
+    if (file->fd && !file->fd->buffer.empty())
+    {
+        data = file->fd->buffer;
+    }
+    else
+    {
+        // Try to read current content
+        data = file->Read();
+    }
+
+    if (data.empty())
     {
         return -1;
     }
@@ -290,10 +303,10 @@ int FileSystem::SyncFileToSD(espnix::File *file, const std::string &path)
     }
 
     // Write file to SD card
-    fs::File sdFile = SD.open(path.c_str(), FILE_WRITE);
+    File sdFile = SD.open(path.c_str(), FILE_WRITE);
     if (sdFile)
     {
-        sdFile.write((const uint8_t*)file->content, file->size);
+        sdFile.write((const uint8_t*)data.c_str(), data.length());
         sdFile.close();
     }
 
@@ -307,13 +320,13 @@ void FileSystem::WriteFile(espnix::File *file, const std::string &data, const st
         return;
     }
 
-    // Write to in-memory file
+    // Write to file using FileDescriptor mechanism
     file->Write(data);
 
-    // Auto-sync to SD card if enabled
+    // Auto-sync to SD card if enabled (FileDescriptor handles this automatically)
     if (this->autoSync && this->sdMounted && !this->inInitramfs)
     {
-        SyncFileToSD(file, path);
+        file->Sync();
     }
 }
 
@@ -371,10 +384,8 @@ std::string FileSystem::GetStringPermissions(int permissions, std::string entryT
     {
         return "d" + result;
     }
-    else
-    {
-        return "-" + result;
-    }
+
+    return "-" + result;
 }
 
 espnix::Folder *FileSystem::GetFolder(std::string path)
@@ -543,7 +554,7 @@ void FileSystem::CreateDefaultDirectories()
     }
 
     // Create a welcome file in /root
-    fs::File welcomeFile = SD.open("/root/README.txt", FILE_WRITE);
+    File welcomeFile = SD.open("/root/README.txt", FILE_WRITE);
     if (welcomeFile)
     {
         welcomeFile.println("Welcome to Espnix!");
@@ -569,7 +580,7 @@ void FileSystem::CreateDefaultDirectories()
     }
 
     // Create message of the day
-    fs::File motdFile = SD.open("/etc/motd", FILE_WRITE);
+    File motdFile = SD.open("/etc/motd", FILE_WRITE);
     if (motdFile)
     {
         motdFile.println("╔══════════════════════════════════════════════════╗");
@@ -593,7 +604,7 @@ void FileSystem::MarkInitialized()
     }
 
     // Create the .init marker file in /sys
-    fs::File initFile = SD.open("/sys/.init", FILE_WRITE);
+    File initFile = SD.open("/sys/.init", FILE_WRITE);
     if (initFile)
     {
         initFile.println("# Espnix initialization marker");
@@ -607,5 +618,60 @@ void FileSystem::MarkInitialized()
     {
         BootMessages::PrintWarn("Failed to create initialization marker");
     }
+}
+
+espnix::File* FileSystem::CreateFile(const std::string &path, int permissions)
+{
+    // Parse path to get directory and filename
+    size_t lastSlash = path.find_last_of('/');
+    std::string dirPath = (lastSlash != std::string::npos) ? path.substr(0, lastSlash) : "/";
+    std::string fileName = (lastSlash != std::string::npos) ? path.substr(lastSlash + 1) : path;
+
+    if (dirPath.empty()) dirPath = "/";
+
+    // Get or create the parent folder
+    espnix::Folder* parentFolder = GetFolder(dirPath);
+    if (!parentFolder)
+    {
+        return nullptr;  // Parent directory doesn't exist
+    }
+
+    // Check if file already exists
+    espnix::File* existingFile = GetFile(path);
+    if (existingFile)
+    {
+        return existingFile;  // File already exists
+    }
+
+    // Create new file
+    espnix::File* newFile = new espnix::File();
+    newFile->name = fileName;
+    newFile->parent = parentFolder;
+    newFile->permissions = permissions;
+    newFile->owner = 0;
+    newFile->creationDate = time(0);
+
+    // Add to parent folder
+    parentFolder->AddFile(newFile);
+
+    return newFile;
+}
+
+FileDescriptor* FileSystem::OpenFile(const std::string &path, int flags)
+{
+    espnix::File* file = GetFile(path);
+
+    // If file doesn't exist and we're opening for write, create it
+    if (!file && (flags & (O_WRONLY | O_RDWR | O_CREAT)))
+    {
+        file = CreateFile(path);
+    }
+
+    if (!file)
+    {
+        return nullptr;  // File doesn't exist and not creating
+    }
+
+    return file->Open(flags);
 }
 

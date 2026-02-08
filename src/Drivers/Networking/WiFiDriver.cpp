@@ -48,6 +48,7 @@ bool WiFiDriver::Connect(const char *ssid, const char *password)
         delay(500);
         Serial.print(".");
     }
+
     Serial.println();
     Serial.print("Connected to ");
     Serial.println(ssid);
