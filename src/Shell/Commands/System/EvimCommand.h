@@ -1,5 +1,5 @@
-#ifndef ESPNIX_NANOCOMMAND_H
-#define ESPNIX_NANOCOMMAND_H
+#ifndef ESPNIX_EVIMCOMMAND_H
+#define ESPNIX_EVIMCOMMAND_H
 
 #include <Shell/Commands/ICommand.h>
 
