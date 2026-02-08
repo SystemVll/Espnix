@@ -19,7 +19,6 @@ namespace espnix
         std::string Read();
         void Append(std::string data);
         void Write(std::string data);
-        void Remove();
 
         ~File();
     };
