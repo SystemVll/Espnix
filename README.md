@@ -252,9 +252,6 @@ Output written to hello.enix
 Compilation successful!
 
 espnix:/root# run hello.enix
-Loading hello.enix...
-Executing (128 bytes)...
---- Output ---
 30
 1
 0
@@ -262,7 +259,6 @@ Executing (128 bytes)...
 2
 3
 4
---- Execution complete ---
 ```
 
 ### Compiler Commands
@@ -286,23 +282,6 @@ Networks available:
 Name                  Security  Signal
 Home-Network          psk       ****
 espnix:/# iwctl station connect Home-Network mypassword
-```
-
-## Creating Native Binaries
-
-For advanced use cases, you can create native binaries that interface directly with the Espnix system. Native binaries follow this format:
-
-```c
-#include "espnix.h"
-
-int main(void* context) {
-    ExecutionContext* ctx = (ExecutionContext*)context;
-
-    std::string message = "Hello from SD card binary!";
-    ctx->loader->ExecuteSysCall(SYS_WRITE, &message);
-
-    return 0;
-}
 ```
 
 **Note**: For most use cases, the Espnix scripting language (.es files compiled to .enix bytecode) is recommended as it is easier to use and more portable.
