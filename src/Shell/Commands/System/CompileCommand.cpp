@@ -5,6 +5,7 @@
 #include <FileSystem/Folder.h>
 #include <Runtime/Lexer.h>
 #include <Runtime/Compiler.h>
+#include <IO/FileDescriptor.h>
 #include <sstream>
 #include <vector>
 
@@ -13,19 +14,22 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
 {
     if (args.size() < 1)
     {
-        terminal->Write("Usage: compile <source_file> [output_file]\n");
-        terminal->Write("  Compiles source code to .enix bytecode format\n");
+        const std::string msg1 = "Usage: compile <source_file> [output_file]\n";
+        output->write(msg1.c_str(), msg1.size());
+        const std::string msg2 = "  Compiles source code to .enix bytecode format\n";
+        output->write(msg2.c_str(), msg2.size());
         return;
     }
 
     FileSystem *fileSystem = FileSystem::GetInstance();
-    std::string sourceFilePath = args[0];
+    const std::string& sourceFilePath = args[0];
 
     espnix::File *sourceFile = fileSystem->GetFile(sourceFilePath);
 
     if (sourceFile == nullptr)
     {
-        terminal->Write("compile: error: " + sourceFilePath + ": No such file or directory\n");
+        const std::string errMsg = "compile: error: " + sourceFilePath + ": No such file or directory\n";
+        output->write(errMsg.c_str(), errMsg.size());
         return;
     }
 
@@ -52,7 +56,8 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
         outputFilePath = fileSystem->currentPath + "/" + outputFilePath;
     }
 
-    terminal->Write("Compiling " + sourceFilePath + "...\n");
+    const std::string compilingMsg = "Compiling " + sourceFilePath + "...\n";
+    output->write(compilingMsg.c_str(), compilingMsg.size());
 
     try
     {
@@ -61,12 +66,14 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
         Lexer lexer(sourceCode.c_str());
         std::vector<Token>& tokens = lexer.tokenize();
 
-        terminal->Write("Lexical analysis complete (" + std::to_string(tokens.size()) + " tokens)\n");
+        const std::string lexMsg = "Lexical analysis complete (" + std::to_string(tokens.size()) + " tokens)\n";
+        output->write(lexMsg.c_str(), lexMsg.size());
 
         Compiler compiler(tokens);
         std::vector<uint8_t>& bytecode = compiler.compile();
 
-        terminal->Write("Compilation complete (" + std::to_string(bytecode.size()) + " bytes)\n");
+        const std::string compMsg = "Compilation complete (" + std::to_string(bytecode.size()) + " bytes)\n";
+        output->write(compMsg.c_str(), compMsg.size());
 
         std::string bytecodeStr;
         bytecodeStr.reserve(bytecode.size());
@@ -81,8 +88,10 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
         {
             // File exists, overwrite using WriteFile for auto-sync
             fileSystem->WriteFile(outputFile, bytecodeStr, outputFilePath);
-            terminal->Write("Binary file size : " + std::to_string(bytecodeStr.size()) + " bytes\n");
-            terminal->Write("Output written to " + outputFilePath + " (overwritten)\n");
+            const std::string sizeMsg = "Binary file size : " + std::to_string(bytecodeStr.size()) + " bytes\n";
+            output->write(sizeMsg.c_str(), sizeMsg.size());
+            const std::string outMsg = "Output written to " + outputFilePath + " (overwritten)\n";
+            output->write(outMsg.c_str(), outMsg.size());
         }
         else
         {
@@ -105,7 +114,8 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
             espnix::Folder *targetFolder = fileSystem->GetFolder(folderPath);
             if (targetFolder == nullptr)
             {
-                terminal->Write("compile: error: directory not found: " + folderPath + "\n");
+                const std::string errMsg = "compile: error: directory not found: " + folderPath + "\n";
+                output->write(errMsg.c_str(), errMsg.size());
                 return;
             }
 
@@ -117,19 +127,24 @@ void CompileCommand::Execute(const std::vector<std::string> &args, Terminal *ter
             fileSystem->WriteFile(newFile, bytecodeStr, outputFilePath);
 
             targetFolder->AddFile(newFile);
-            terminal->Write("Binary file size : " + std::to_string(bytecodeStr.size()) + " bytes\n");
-            terminal->Write("Output written to " + outputFilePath + "\n");
+            const std::string sizeMsg = "Binary file size : " + std::to_string(bytecodeStr.size()) + " bytes\n";
+            output->write(sizeMsg.c_str(), sizeMsg.size());
+            const std::string outMsg = "Output written to " + outputFilePath + "\n";
+            output->write(outMsg.c_str(), outMsg.size());
         }
 
         // Auto-sync handled by WriteFile, no manual sync needed
-        terminal->Write("Compilation successful!\n");
+        const std::string successMsg = "Compilation successful!\n";
+        output->write(successMsg.c_str(), successMsg.size());
     }
     catch (const std::exception& e)
     {
-        terminal->Write("compile: error: " + std::string(e.what()) + "\n");
+        const std::string errMsg = "compile: error: " + std::string(e.what()) + "\n";
+        output->write(errMsg.c_str(), errMsg.size());
     }
     catch (...)
     {
-        terminal->Write("compile: error: Unknown compilation error\n");
+        const std::string errMsg = "compile: error: Unknown compilation error\n";
+        output->write(errMsg.c_str(), errMsg.size());
     }
 }

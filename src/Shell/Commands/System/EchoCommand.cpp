@@ -1,5 +1,6 @@
 #include "EchoCommand.h"
 #include <Terminal/Terminal.h>
+#include <IO/FileDescriptor.h>
 
 void EchoCommand::Execute(const std::vector<std::string> &args, Terminal *terminal, FileDescriptor *input, FileDescriptor *output)
 {
@@ -7,10 +8,10 @@ void EchoCommand::Execute(const std::vector<std::string> &args, Terminal *termin
     {
         if (i > 0)
         {
-            terminal->Write(" ");
+            output->write(" ", 1);
         }
-        terminal->Write(args[i]);
+        output->write(args[i].c_str(), args[i].size());
     }
 
-    terminal->Write("\n");
+    output->write("\n", 1);
 }

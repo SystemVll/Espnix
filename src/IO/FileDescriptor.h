@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <SD.h>
+#include <sys/_default_fcntl.h>
 
 namespace espnix {
     class File;
@@ -25,7 +26,7 @@ public:
     std::string buffer;
     std::string filePath;  // Path for file descriptors
     espnix::File* file;    // Associated file object
-    fs::File sdFile;       // SD card file handle
+    File sdFile;       // SD card file handle
     bool isOpen;
     int flags;             // Open flags (read/write/append)
 

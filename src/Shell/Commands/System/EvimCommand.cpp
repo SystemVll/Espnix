@@ -16,9 +16,10 @@ enum class EditorMode {
 };
 
 // Helper function to display current line status
-void showCurrentLineStatus(Terminal *terminal, const std::vector<std::string> &lines, size_t currentLine) {
+void showCurrentLineStatus(Terminal *terminal, const std::vector<std::string> &lines, size_t currentLine, FileDescriptor *output) {
     if (currentLine < lines.size()) {
-        terminal->Write("Line " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + ": " + lines[currentLine] + "\n");
+        const std::string statusMsg = "Line " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + ": " + lines[currentLine] + "\n";
+        output->write(statusMsg.c_str(), statusMsg.size());
     }
 }
 
@@ -26,7 +27,8 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
 {
     if (args.size() != 1)
     {
-        terminal->Write("Usage: evim <file>\n");
+        const std::string msg = "Usage: evim <file>\n";
+        output->write(msg.c_str(), msg.size());
         return;
     }
 
@@ -41,10 +43,12 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
         file = fileSystem->CreateFile(filePath, 0644);
         if (file == nullptr)
         {
-            terminal->Write("Error: Could not create file " + filePath + "\n");
+            const std::string errMsg = "Error: Could not create file " + filePath + "\n";
+            output->write(errMsg.c_str(), errMsg.size());
             return;
         }
-        terminal->Write("evim: " + filePath + ": New file\n");
+        const std::string newMsg = "evim: " + filePath + ": New file\n";
+        output->write(newMsg.c_str(), newMsg.size());
     }
 
     // Read existing content and split into lines
@@ -67,23 +71,32 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
     }
 
     // Display the file content with line numbers
-    terminal->Write("=== Editing " + filePath + " ===\n");
+    const std::string editingMsg = "=== Editing " + filePath + " ===\n";
+    output->write(editingMsg.c_str(), editingMsg.size());
     for (size_t i = 0; i < lines.size(); i++)
     {
-        terminal->Write(std::to_string(i + 1) + ": " + lines[i] + "\n");
+        const std::string lineMsg = std::to_string(i + 1) + ": " + lines[i] + "\n";
+        output->write(lineMsg.c_str(), lineMsg.size());
     }
 
     // Initialize editor state
     EditorMode mode = EditorMode::COMMAND;
     size_t currentLine = 0;
 
-    terminal->Write("\n--- EVIM Editor ---\n");
-    terminal->Write("Commands: ':q' (quit), ':wq' (save & quit), ':w' (save)\n");
-    terminal->Write("          'i' (insert), 'I' (insert at start), 'a' (append), 'A' (append at end)\n");
-    terminal->Write("          'o' (new line), 'dd' (delete line)\n");
-    terminal->Write("          'j' (next line), 'k' (prev line), '[num]' (goto line)\n");
-    terminal->Write("Current mode: COMMAND | Line: " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + "\n");
-    terminal->Write("> ");
+    const std::string header1 = "\n--- EVIM Editor ---\n";
+    output->write(header1.c_str(), header1.size());
+    const std::string header2 = "Commands: ':q' (quit), ':wq' (save & quit), ':w' (save)\n";
+    output->write(header2.c_str(), header2.size());
+    const std::string header3 = "          'i' (insert), 'I' (insert at start), 'a' (append), 'A' (append at end)\n";
+    output->write(header3.c_str(), header3.size());
+    const std::string header4 = "          'o' (new line), 'dd' (delete line)\n";
+    output->write(header4.c_str(), header4.size());
+    const std::string header5 = "          'j' (next line), 'k' (prev line), '[num]' (goto line)\n";
+    output->write(header5.c_str(), header5.size());
+    const std::string statusMsg = "Current mode: COMMAND | Line: " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + "\n";
+    output->write(statusMsg.c_str(), statusMsg.size());
+    const std::string prompt = "> ";
+    output->write(prompt.c_str(), prompt.size());
     std::string currentInput = "";
     bool fileModified = false;
 
@@ -104,8 +117,10 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
         if (mode == EditorMode::INSERT && ch == 27) // ESC key
         {
             mode = EditorMode::COMMAND;
-            terminal->Write("\n-- COMMAND MODE --\n");
-            terminal->Write("Line: " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + " > ");
+            const std::string cmdMode = "\n-- COMMAND MODE --\n";
+            output->write(cmdMode.c_str(), cmdMode.size());
+            const std::string linePrompt = "Line: " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + " > ";
+            output->write(linePrompt.c_str(), linePrompt.size());
             continue;
         }
 
@@ -113,7 +128,7 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
         if (ch == '\n' || ch == '\r')
         {
             // Process the complete command/line
-            terminal->Write("\n"); // Echo newline
+            output->write("\n", 1); // Echo newline
 
             std::string command = currentInput;
             currentInput = ""; // Reset input buffer
@@ -125,17 +140,20 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                 {
                     if (fileModified)
                     {
-                        terminal->Write("File has unsaved changes. Use ':wq' to save or ':q!' to force quit.\n");
+                        const std::string msg = "File has unsaved changes. Use ':wq' to save or ':q!' to force quit.\n";
+                        output->write(msg.c_str(), msg.size());
                     }
                     else
                     {
-                        terminal->Write("Exiting without saving.\n");
+                        const std::string msg = "Exiting without saving.\n";
+                        output->write(msg.c_str(), msg.size());
                         return;
                     }
                 }
                 else if (command == ":q!")
                 {
-                    terminal->Write("Exiting without saving (forced).\n");
+                    const std::string msg = "Exiting without saving (forced).\n";
+                    output->write(msg.c_str(), msg.size());
                     return;
                 }
                 else if (command == ":wq")
@@ -151,7 +169,8 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                         }
                     }
                     file->Write(newContent);
-                    terminal->Write("File saved and exiting.\n");
+                    const std::string msg = "File saved and exiting.\n";
+                    output->write(msg.c_str(), msg.size());
                     return;
                 }
                 else if (command == ":w")
@@ -168,31 +187,40 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                     }
                     file->Write(newContent);
                     fileModified = false;
-                    terminal->Write("File saved.\n");
+                    const std::string msg = "File saved.\n";
+                    output->write(msg.c_str(), msg.size());
                 }
                 else if (command == "i")
                 {
                     mode = EditorMode::INSERT;
-                    terminal->Write("-- INSERT MODE --\n");
-                    terminal->Write("Type your text. Press ESC to return to command mode.\n");
+                    const std::string msg1 = "-- INSERT MODE --\n";
+                    output->write(msg1.c_str(), msg1.size());
+                    const std::string msg2 = "Type your text. Press ESC to return to command mode.\n";
+                    output->write(msg2.c_str(), msg2.size());
                 }
                 else if (command == "I")
                 {
                     mode = EditorMode::INSERT;
-                    terminal->Write("-- INSERT MODE (at line start) --\n");
-                    terminal->Write("Type your text. Press ESC to return to command mode.\n");
+                    const std::string msg1 = "-- INSERT MODE (at line start) --\n";
+                    output->write(msg1.c_str(), msg1.size());
+                    const std::string msg2 = "Type your text. Press ESC to return to command mode.\n";
+                    output->write(msg2.c_str(), msg2.size());
                 }
                 else if (command == "a")
                 {
                     mode = EditorMode::INSERT;
-                    terminal->Write("-- APPEND MODE --\n");
-                    terminal->Write("Type your text. Press ESC to return to command mode.\n");
+                    const std::string msg1 = "-- APPEND MODE --\n";
+                    output->write(msg1.c_str(), msg1.size());
+                    const std::string msg2 = "Type your text. Press ESC to return to command mode.\n";
+                    output->write(msg2.c_str(), msg2.size());
                 }
                 else if (command == "A")
                 {
                     mode = EditorMode::INSERT;
-                    terminal->Write("-- APPEND MODE (at line end) --\n");
-                    terminal->Write("Type your text. Press ESC to return to command mode.\n");
+                    const std::string msg1 = "-- APPEND MODE (at line end) --\n";
+                    output->write(msg1.c_str(), msg1.size());
+                    const std::string msg2 = "Type your text. Press ESC to return to command mode.\n";
+                    output->write(msg2.c_str(), msg2.size());
                 }
                 else if (command == "j")
                 {
@@ -200,11 +228,12 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                     if (currentLine < lines.size() - 1)
                     {
                         currentLine++;
-                        showCurrentLineStatus(terminal, lines, currentLine);
+                        showCurrentLineStatus(terminal, lines, currentLine, output);
                     }
                     else
                     {
-                        terminal->Write("Already at last line.\n");
+                        const std::string msg = "Already at last line.\n";
+                        output->write(msg.c_str(), msg.size());
                     }
                 }
                 else if (command == "k")
@@ -213,11 +242,12 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                     if (currentLine > 0)
                     {
                         currentLine--;
-                        showCurrentLineStatus(terminal, lines, currentLine);
+                        showCurrentLineStatus(terminal, lines, currentLine, output);
                     }
                     else
                     {
-                        terminal->Write("Already at first line.\n");
+                        const std::string msg = "Already at first line.\n";
+                        output->write(msg.c_str(), msg.size());
                     }
                 }
                 else if (command == "o")
@@ -235,7 +265,8 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                     }
                     mode = EditorMode::INSERT;
                     fileModified = true;
-                    terminal->Write("-- INSERT MODE (new line) --\n");
+                    const std::string msg = "-- INSERT MODE (new line) --\n";
+                    output->write(msg.c_str(), msg.size());
                 }
                 else if (command == "dd")
                 {
@@ -253,7 +284,8 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                             currentLine = 0;
                         }
                         fileModified = true;
-                        terminal->Write("Line deleted.\n");
+                        const std::string msg = "Line deleted.\n";
+                        output->write(msg.c_str(), msg.size());
                     }
                 }
                 else if (!command.empty())
@@ -265,22 +297,25 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
                         if (lineNum > 0 && lineNum <= lines.size())
                         {
                             currentLine = lineNum - 1;
-                            showCurrentLineStatus(terminal, lines, currentLine);
+                            showCurrentLineStatus(terminal, lines, currentLine, output);
                         }
                         else
                         {
-                            terminal->Write("Invalid line number. Valid range: 1-" + std::to_string(lines.size()) + "\n");
+                            const std::string msg = "Invalid line number. Valid range: 1-" + std::to_string(lines.size()) + "\n";
+                            output->write(msg.c_str(), msg.size());
                         }
                     }
                     catch (...)
                     {
-                        terminal->Write("Unknown command: " + command + "\n");
+                        const std::string msg = "Unknown command: " + command + "\n";
+                        output->write(msg.c_str(), msg.size());
                     }
                 }
 
                 if (mode == EditorMode::COMMAND)
                 {
-                    terminal->Write("Line: " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + " > ");
+                    const std::string linePrompt = "Line: " + std::to_string(currentLine + 1) + "/" + std::to_string(lines.size()) + " > ";
+                    output->write(linePrompt.c_str(), linePrompt.size());
                 }
             }
             else if (mode == EditorMode::INSERT)
@@ -311,13 +346,14 @@ void EvimCommand::Execute(const std::vector<std::string> &args, Terminal *termin
             if (!currentInput.empty())
             {
                 currentInput.pop_back();
-                terminal->Write("\b \b"); // Backspace, space, backspace to erase character
+                const std::string backspace = "\b \b";
+                output->write(backspace.c_str(), backspace.size()); // Backspace, space, backspace to erase character
             }
         }
         else if (ch >= 32 && ch <= 126) // Printable characters
         {
             currentInput += ch;
-            terminal->Write(std::string(1, ch)); // Echo the character
+            output->write(&ch, 1); // Echo the character
         }
         // Ignore other control characters
     }

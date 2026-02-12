@@ -3,6 +3,7 @@
 #include <FileSystem/Folder.h>
 #include <FileSystem/FileSystem.h>
 #include <Terminal/Terminal.h>
+#include <IO/FileDescriptor.h>
 
 void ChangeDirectoryCommand::Execute(const std::vector<std::string> &args, Terminal *terminal, FileDescriptor *input, FileDescriptor *output)
 {
@@ -48,6 +49,7 @@ void ChangeDirectoryCommand::Execute(const std::vector<std::string> &args, Termi
     }
     else
     {
-        terminal->Write("-esh: cd: " + path + ": No such file or directory\n");
+        const std::string errorMsg = "-esh: cd: " + path + ": No such file or directory\n";
+        output->write(errorMsg.c_str(), errorMsg.size());
     }
 }

@@ -6,6 +6,7 @@
 #include <FileSystem/FileSystem.h>
 #include <Terminal/Terminal.h>
 #include <Utils/Utils.h>
+#include <IO/FileDescriptor.h>
 
 #include "ListCommand.h"
 
@@ -19,15 +20,17 @@ void ListCommand::Execute(const std::vector<std::string> &args, Terminal *termin
     {
         for (const espnix::Folder *subFolder : folder->folders)
         {
-            terminal->Write(subFolder->name + " ");
+            std::string folderName = subFolder->name + " ";
+            output->write(folderName.c_str(), folderName.size());
         }
 
         for (const espnix::File *file : folder->files)
         {
-            terminal->Write(file->name + " ");
+            std::string fileName = file->name + " ";
+            output->write(fileName.c_str(), fileName.size());
         }
 
-        terminal->Write("\n");
+        output->write("\n", 1);
         return;
     }
 
@@ -36,13 +39,15 @@ void ListCommand::Execute(const std::vector<std::string> &args, Terminal *termin
         for (const espnix::Folder *subFolder : folder->folders)
         {
             std::string permissions = fileSystem->GetStringPermissions(subFolder->permissions, "folder");
-            terminal->Write(permissions + " root root 4096 " + Utils::FormatDate(subFolder->creationDate) + " " + subFolder->name + "\n");
+            std::string line = permissions + " root root 4096 " + Utils::FormatDate(subFolder->creationDate) + " " + subFolder->name + "\n";
+            output->write(line.c_str(), line.size());
         }
 
         for (const espnix::File *file : folder->files)
         {
             std::string permissions = fileSystem->GetStringPermissions(file->permissions, "file");
-            terminal->Write(permissions + " root root " + std::to_string(file->GetSize()) + " " + Utils::FormatDate(file->creationDate) + " " + file->name + "\n");
+            std::string line = permissions + " root root " + std::to_string(file->GetSize()) + " " + Utils::FormatDate(file->creationDate) + " " + file->name + "\n";
+            output->write(line.c_str(), line.size());
         }
 
         return;
@@ -50,13 +55,15 @@ void ListCommand::Execute(const std::vector<std::string> &args, Terminal *termin
 
     for (const espnix::Folder *subFolder : folder->folders)
     {
-        terminal->Write(subFolder->name + " ");
+        std::string folderName = subFolder->name + " ";
+        output->write(folderName.c_str(), folderName.size());
     }
 
     for (espnix::File *file : folder->files)
     {
-        terminal->Write(file->name + " ");
+        std::string fileName = file->name + " ";
+        output->write(fileName.c_str(), fileName.size());
     }
 
-    terminal->Write("\n");
+    output->write("\n", 1);
 }

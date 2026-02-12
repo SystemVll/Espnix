@@ -1,14 +1,18 @@
 #include <FileSystem/File.h>
 #include <FileSystem/FileSystem.h>
 #include <Terminal/Terminal.h>
+#include <IO/FileDescriptor.h>
 
 #include "CatCommand.h"
 
 void CatCommand::Execute(const std::vector<std::string> &args, Terminal *terminal, FileDescriptor *input, FileDescriptor *output)
 {
+    input->open();
+
     if (args.size() != 1)
     {
-        terminal->Write("Usage: cat <file>\n");
+        const std::string msg = "Usage: cat <file>\n";
+        output->write(msg.c_str(), msg.size());
         return;
     }
 
@@ -18,9 +22,13 @@ void CatCommand::Execute(const std::vector<std::string> &args, Terminal *termina
 
     if (file == nullptr)
     {
-        terminal->Write("cat: " + filePath + ": No such file or directory\n");
+        const std::string errorMsg = "cat: " + filePath + ": No such file or directory\n";
+
+        output->write(errorMsg.c_str(), errorMsg.size());
         return;
     }
 
-    terminal->Write(file->Read());
+    const std::string content = file->Read();
+
+    output->write(content.c_str(), content.size());
 }

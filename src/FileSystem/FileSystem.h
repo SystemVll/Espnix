@@ -1,10 +1,8 @@
 #ifndef FILE_SYSTEM_H
 #define FILE_SYSTEM_H
 
-#include <vector>
 #include <string>
-#include <fcntl.h>
-#include <SD.h>
+#include <sys/_default_fcntl.h>
 
 namespace espnix
 {
@@ -16,7 +14,6 @@ class FileDescriptor;
 
 class FileSystem
 {
-private:
     static FileSystem *instance;
     FileSystem();
 

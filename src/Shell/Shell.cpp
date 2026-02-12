@@ -70,6 +70,10 @@ void Shell::Interpret(const std::string &input)
             auto *stdin_fd = new FileDescriptor(0);
             auto *stdout_fd = new FileDescriptor(1);
 
+            if (std::find(args.begin(), args.end(), "|") == args.end()) {
+
+            }
+
             terminal->Write("\n");
             it->second->Execute(args, terminal, stdin_fd, stdout_fd);
         }

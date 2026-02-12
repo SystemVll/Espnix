@@ -160,8 +160,13 @@ ssize_t FileDescriptor::write(const void *buffer, size_t count)
 
     if (this->type == FDType::STANDARD)
     {
-        Serial.write(static_cast<const char *>(buffer), count);
-        return count;
+        const char* charBuffer = static_cast<const char*>(buffer);
+
+        size_t written = Serial.write(reinterpret_cast<const uint8_t*>(charBuffer), count);
+
+        this->buffer.append(charBuffer, count);
+
+        return static_cast<ssize_t>(written);
     }
 
     if (this->type == FDType::FILE)
