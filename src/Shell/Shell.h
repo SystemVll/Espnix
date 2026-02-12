@@ -18,6 +18,7 @@ class Shell
 private:
     std::map<std::string, std::shared_ptr<ICommand>> commandRegistry;
     std::string prompt;
+    FileSystem * fs;
 
 public:
     Terminal *terminal;

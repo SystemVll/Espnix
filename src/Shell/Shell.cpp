@@ -47,7 +47,9 @@ Shell::Shell() : terminal(nullptr)
     commandRegistry["iwctl"] = std::make_shared<IwctlCommand>();
     BootMessages::PrintOK("Network utilities loaded");
 
-    this->prompt = "espnix:/# ";
+    this->fs = FileSystem::GetInstance();
+
+    this->prompt = "espnix:" + this->fs->currentPath + "# ";
 }
 
 void Shell::Interpret(const std::string &input)
@@ -88,9 +90,7 @@ void Shell::Interpret(const std::string &input)
         terminal->Write("\n");
     }
 
-    const FileSystem *fs = FileSystem::GetInstance();
-
-    this->prompt = "espnix:" + fs->currentPath + "# ";
+    this->prompt = "espnix:" + this->fs->currentPath + "# ";
     this->Prompt();
 }
 
