@@ -16,7 +16,7 @@ FileSystem::FileSystem()
     this->sdMounted = false;
     this->inInitramfs = true;
     this->autoSync = true;  // Auto-sync enabled by default
-    this->currentPath = "/";
+    this->currentPath = "/root";
 }
 
 void FileSystem::InitializeInitramfs()

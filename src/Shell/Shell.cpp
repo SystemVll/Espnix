@@ -64,7 +64,7 @@ void Shell::Interpret(const std::string &input)
 
     if (!command.empty())
     {
-        auto it = commandRegistry.find(command);
+        const auto it = commandRegistry.find(command);
         if (it != commandRegistry.end())
         {
             auto *stdin_fd = new FileDescriptor(0);
@@ -88,7 +88,7 @@ void Shell::Interpret(const std::string &input)
         terminal->Write("\n");
     }
 
-    FileSystem *fs = FileSystem::GetInstance();
+    const FileSystem *fs = FileSystem::GetInstance();
 
     this->prompt = "espnix:" + fs->currentPath + "# ";
     this->Prompt();
